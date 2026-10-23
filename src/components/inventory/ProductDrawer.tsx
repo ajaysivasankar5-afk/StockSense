@@ -221,6 +221,7 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
                 showForecastBands={true}
                 reorderPoint={reorderItem?.reorder_point}
                 currentStock={product.stock_on_hand}
+                dailyDemand={reorderItem?.daily_demand}
                 shelfLifeDayIndex={
                   product.shelf_life_days && product.shelf_life_days <= 14
                     ? 10 + product.shelf_life_days

@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, ShieldCheck, Zap, RefreshCw, BarChart3, Clock, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import shopkeeperImg from '../assets/images/shopkeeper_inventory_1792753808812.jpg';
 
 export interface LandingPageProps {
   onStartTrial: () => void;
@@ -52,15 +53,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={onStartTrial}
                   rightIcon={<ArrowRight size={18} strokeWidth={2} />}
                 >
-                  Start 3-month free trial
+                  Get Started
                 </Button>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="lg"
                   onClick={onLogin}
-                  className="px-5 py-3 text-sm font-semibold text-mint hover:text-white hover:underline transition-colors cursor-pointer"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/20"
                 >
-                  Login
-                </button>
+                  Login to Store
+                </Button>
               </div>
 
               <div className="pt-4 flex items-center gap-6 text-xs text-on-navy-muted">
@@ -76,28 +78,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Hero Art / Flat shopkeeper illustration with live badge */}
+            {/* Right Column: Hero Art / Shopkeeper visual image with live badge */}
             <div className="lg:col-span-5 relative">
-              <div className="relative rounded-2xl overflow-hidden border border-navy-700 bg-navy-800 shadow-[0_8px_30px_rgba(15,23,42,0.25)]">
+              <div className="relative rounded-2xl overflow-hidden border border-navy-700 bg-navy-800 shadow-[0_12px_36px_rgba(0,0,0,0.4)] group">
                 <img
-                  src="/src/assets/images/shopkeeper_inventory_1792753808812.jpg"
+                  src={shopkeeperImg}
                   alt="StockSense retail shopkeeper checking stock on phone"
-                  className="w-full h-auto object-cover"
-                  referrerPolicy="no-referrer"
+                  className="w-full h-[380px] sm:h-[420px] object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
-                {/* Floating Signature Top Priority Mock */}
-                <div className="absolute bottom-4 left-4 right-4 bg-navy-900/95 border border-navy-700 backdrop-blur-md rounded-xl p-4 text-on-navy">
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-transparent opacity-80" />
+
+                {/* Floating Signature Top Priority Badge Overlay */}
+                <div className="absolute bottom-4 left-4 right-4 bg-navy-900/90 border border-navy-700/80 backdrop-blur-md rounded-xl p-4 text-on-navy shadow-xl">
                   <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-on-navy-muted uppercase mb-1">
-                    <span>Top Priority</span>
-                    <span className="bg-accent/20 text-accent border border-accent/30 px-2 py-0.5 rounded-full text-[10px]">
-                      CRITICAL
+                    <span>AI Reorder Priority</span>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                      LIVE DEMO
                     </span>
                   </div>
                   <div className="font-heading font-bold text-2xl text-mint tabular-nums">
                     Order 48 units
                   </div>
                   <div className="text-xs text-slate-300">
-                    Run out in 2 days · Amul Taaza Milk
+                    Run out in 2 days · Amul Taaza Milk 500ml
                   </div>
                 </div>
               </div>

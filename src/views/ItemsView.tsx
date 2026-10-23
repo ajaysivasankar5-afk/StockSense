@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Filter, RefreshCw, ChevronRight, Building, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Search, Plus, Filter, RefreshCw, ChevronRight, Building, Clock, AlertTriangle, ShieldCheck, ShoppingBag, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Product, ReorderItem } from '../types/inventory';
 import { Badge } from '../components/ui/Badge';
@@ -9,6 +9,7 @@ import { ProductDrawer } from '../components/inventory/ProductDrawer';
 import { AddItemModal } from '../components/inventory/AddItemModal';
 import { SupplierManageModal } from '../components/inventory/SupplierManageModal';
 import { useToast } from '../components/ui/Toast';
+import { StockSparklineGraph } from '../components/ui/Chart';
 
 export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenStockCount }) => {
   const { products, forecasts, reorderItems, updateProductStock, addToOldStock, removeFromOldStock } = useStore();
@@ -53,16 +54,34 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
     });
   };
 
+  const handleSellItems = (productId: string, currentStock: number, qtyToSell = 5) => {
+    const newStock = Math.max(0, currentStock - qtyToSell);
+    updateProductStock(productId, newStock);
+    success(`Sold ${qtyToSell} units. Stock moved down to ${newStock}!`);
+  };
+
+  const handleBuyItems = (productId: string, currentStock: number, qtyToBuy = 10) => {
+    const newStock = currentStock + qtyToBuy;
+    updateProductStock(productId, newStock);
+    success(`Restocked +${qtyToBuy} units. Stock moved up to ${newStock}!`);
+  };
+
+  const handleRebuyItem = (productId: string, currentStock: number, recommendedQty = 12) => {
+    const newStock = currentStock + (recommendedQty || 12);
+    updateProductStock(productId, newStock);
+    success(`Rebought +${recommendedQty || 12} units! Graph updated.`);
+  };
+
   return (
     <div className="max-w-[1120px] mx-auto px-4 sm:px-8 py-8 space-y-6">
       {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-text tracking-tight">
-            Items Master & Daily Inventory
+            Items Master & Live Stock Movement
           </h1>
           <p className="text-xs text-text-muted mt-1">
-            {products.length} registered retail items · Click any item for demand forecasting & old stock actions
+            {products.length} registered items · Sell, Buy, or Rebuy items to watch stock trajectory graphs move in real time
           </p>
         </div>
 
@@ -138,8 +157,9 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
                 <th className="py-3 px-4 w-12 text-center">S.No</th>
                 <th className="py-3 px-4">Items & SKU</th>
                 <th className="py-3 px-4 text-right">Selling Price</th>
+                <th className="py-3 px-4 text-center">Stock Trajectory Graph</th>
                 <th className="py-3 px-4 text-right">Stock on Hand</th>
-                <th className="py-3 px-4 text-right">In Transit</th>
+                <th className="py-3 px-4 text-center">Sell / Buy / Rebuy Actions</th>
                 <th className="py-3 px-4">Buying Recommendation</th>
                 <th className="py-3 px-4 w-10"></th>
               </tr>
@@ -151,7 +171,7 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
                   <tr
                     key={`${p.id}_${idx}`}
                     onClick={() => setSelectedProduct(p)}
-                    className="h-14 hover:bg-surface-soft/60 cursor-pointer transition-colors group"
+                    className="h-16 hover:bg-surface-soft/60 cursor-pointer transition-colors group"
                   >
                     <td className="py-2.5 px-4 text-center tabular-nums text-text-muted">
                       {idx + 1}
@@ -168,6 +188,16 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
 
                     <td className="py-2.5 px-4 text-right tabular-nums font-medium text-text">
                       ₹{p.selling_price}
+                    </td>
+
+                    {/* Stock Movement Sparkline Graph Column */}
+                    <td className="py-2.5 px-4 text-center">
+                      <StockSparklineGraph
+                        currentStock={p.stock_on_hand}
+                        reorderPoint={reorder?.reorder_point || 12}
+                        dailyDemand={reorder?.daily_demand || 2}
+                        unit={p.unit}
+                      />
                     </td>
 
                     <td
@@ -203,6 +233,44 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
                           title="Increase"
                         >
                           +
+                        </button>
+                      </div>
+                    </td>
+
+                    {/* Quick Sell / Buy / Rebuy Movement Action Buttons */}
+                    <td
+                      className="py-2.5 px-4 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSellItems(p.id, p.stock_on_hand, 5)}
+                          className="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800 rounded font-semibold text-[11px] flex items-center gap-0.5 transition-colors cursor-pointer"
+                          title="Record sale: Moves graph down"
+                        >
+                          <ArrowDownRight size={12} />
+                          Sell 5
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleBuyItems(p.id, p.stock_on_hand, 10)}
+                          className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 rounded font-semibold text-[11px] flex items-center gap-0.5 transition-colors cursor-pointer"
+                          title="Restock/Buy: Moves graph up"
+                        >
+                          <ArrowUpRight size={12} />
+                          Buy 10
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRebuyItem(p.id, p.stock_on_hand, reorder?.final_qty || 12)}
+                          className="px-2 py-1 bg-navy-900 text-white dark:bg-mint dark:text-navy-900 hover:opacity-90 rounded font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Rebuy recommended qty: Moves graph up"
+                        >
+                          <RefreshCw size={10} />
+                          Rebuy
                         </button>
                       </div>
                     </td>
@@ -336,17 +404,51 @@ export const ItemsView: React.FC<{ onOpenStockCount: () => void }> = ({ onOpenSt
                     />
                     <span>{p.unit}</span>
                   </div>
+
+                  <StockSparklineGraph
+                    currentStock={p.stock_on_hand}
+                    reorderPoint={reorder?.reorder_point || 12}
+                    dailyDemand={reorder?.daily_demand || 2}
+                    unit={p.unit}
+                    width={90}
+                    height={24}
+                  />
+
                   <div>
                     <span>Rate: </span>
                     <span className="font-semibold text-text tabular-nums">
                       ₹{p.selling_price}
                     </span>
                   </div>
-                  {reorder && (
-                    <div className="text-primary-ink font-semibold">
-                      Order: {reorder.final_qty} {p.unit}
-                    </div>
-                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/60" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSellItems(p.id, p.stock_on_hand, 5)}
+                      className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 rounded text-[11px] font-semibold flex items-center gap-0.5"
+                    >
+                      <ArrowDownRight size={11} />
+                      Sell 5
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBuyItems(p.id, p.stock_on_hand, 10)}
+                      className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 rounded text-[11px] font-semibold flex items-center gap-0.5"
+                    >
+                      <ArrowUpRight size={11} />
+                      Buy 10
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRebuyItem(p.id, p.stock_on_hand, reorder?.final_qty || 12)}
+                    className="px-2 py-0.5 bg-navy-900 text-white dark:bg-mint dark:text-navy-900 rounded text-[11px] font-semibold flex items-center gap-1"
+                  >
+                    <RefreshCw size={10} />
+                    Rebuy
+                  </button>
                 </div>
               </div>
             );

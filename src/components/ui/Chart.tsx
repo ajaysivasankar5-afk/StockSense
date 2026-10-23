@@ -14,6 +14,7 @@ export interface ChartProps {
   showForecastBands?: boolean;
   reorderPoint?: number;
   currentStock?: number;
+  dailyDemand?: number;
   shelfLifeDayIndex?: number;
   unit?: string;
   className?: string;
@@ -25,6 +26,7 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
   showForecastBands = false,
   reorderPoint,
   currentStock,
+  dailyDemand = 1,
   shelfLifeDayIndex,
   unit = 'units',
   className = '',
@@ -49,8 +51,8 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
     if (d.forecast !== undefined) allValues.push(d.forecast);
     if (d.upperBand !== undefined) allValues.push(d.upperBand);
   });
-  if (reorderPoint) allValues.push(reorderPoint);
-  if (currentStock) allValues.push(currentStock);
+  if (reorderPoint !== undefined) allValues.push(reorderPoint);
+  if (currentStock !== undefined) allValues.push(currentStock);
 
   const maxValue = Math.max(...allValues, 10) * 1.15;
   const minValue = 0;
@@ -95,6 +97,25 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
       .map((d, i) => `${getX(data.length - 1 - i)},${getY(d.lowerBand ?? d.value)}`)
       .join(' L ');
     bandPath = `M ${firstX},${getY(data[0].upperBand ?? data[0].value)} L ${upperPoints} L ${lowerPointsReversed} Z`;
+  }
+
+  // Calculate stock depletion trajectory line starting at day 0 (or midpoint) using currentStock
+  let stockTrajectoryPath = '';
+  if (currentStock !== undefined) {
+    const startIdx = Math.floor(data.length / 2);
+    const pts: string[] = [];
+    let remStock = currentStock;
+    const rate = Math.max(0.2, dailyDemand);
+
+    for (let i = startIdx; i < data.length; i++) {
+      const x = getX(i);
+      const y = getY(Math.max(0, remStock));
+      pts.push(`${x},${y}`);
+      remStock = Math.max(0, remStock - rate);
+    }
+    if (pts.length > 0) {
+      stockTrajectoryPath = pts.join(' L ');
+    }
   }
 
   // Y-axis grid ticks (4 ticks)
@@ -157,6 +178,52 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
         {/* Fill Area */}
         <path d={areaPath} fill="url(#emeraldArea)" />
 
+        {/* Current Stock Trajectory Line (Cyan/Emerald path moving with currentStock) */}
+        {currentStock !== undefined && stockTrajectoryPath && (
+          <g>
+            <path
+              d={`M ${stockTrajectoryPath}`}
+              fill="none"
+              stroke="#06B6D4"
+              strokeWidth="2.5"
+              strokeDasharray="5,4"
+              className="transition-all duration-300"
+            />
+          </g>
+        )}
+
+        {/* Current Stock Reference Line */}
+        {currentStock !== undefined && (
+          <g className="transition-all duration-300">
+            <line
+              x1={paddingLeft}
+              y1={getY(currentStock)}
+              x2={chartWidth - paddingRight}
+              y2={getY(currentStock)}
+              stroke="#06B6D4"
+              strokeDasharray="4,2"
+              strokeWidth="1.5"
+            />
+            <rect
+              x={chartWidth - paddingRight - 120}
+              y={Math.max(paddingTop, getY(currentStock) - 10)}
+              width="120"
+              height="18"
+              rx="4"
+              fill="#0891B2"
+              className="shadow-sm"
+            />
+            <text
+              x={chartWidth - paddingRight - 60}
+              y={Math.max(paddingTop + 12, getY(currentStock) + 3)}
+              textAnchor="middle"
+              className="text-[10px] font-bold fill-white tabular-nums"
+            >
+              Stock: {currentStock} {unit}
+            </text>
+          </g>
+        )}
+
         {/* Reorder Point Reference Line (dashed navy) */}
         {reorderPoint !== undefined && (
           <g>
@@ -170,9 +237,9 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
               strokeWidth="1.5"
             />
             <text
-              x={chartWidth - paddingRight}
+              x={paddingLeft + 6}
               y={getY(reorderPoint) - 5}
-              textAnchor="end"
+              textAnchor="start"
               className="text-[10px] font-semibold fill-navy-900 dark:fill-slate-300"
             >
               ROP: {reorderPoint}
@@ -297,3 +364,64 @@ export const AreaForecastChart: React.FC<ChartProps> = ({
     </div>
   );
 };
+
+export const StockSparklineGraph: React.FC<{
+  currentStock: number;
+  reorderPoint?: number;
+  dailyDemand?: number;
+  unit?: string;
+  width?: number;
+  height?: number;
+}> = ({ currentStock, reorderPoint = 10, dailyDemand = 1, unit = 'pcs', width = 110, height = 28 }) => {
+  const maxVal = Math.max(currentStock, reorderPoint * 1.5, 10);
+  const getScaledY = (v: number) => {
+    const c = Math.max(0, Math.min(maxVal, v));
+    return height - 4 - (c / maxVal) * (height - 8);
+  };
+
+  const stockY = getScaledY(currentStock);
+  const ropY = getScaledY(reorderPoint);
+
+  // Trajectory points
+  const p1 = `0,${stockY}`;
+  const p2 = `${width * 0.4},${stockY}`;
+  const endStock = Math.max(0, currentStock - dailyDemand * 5);
+  const p3 = `${width},${getScaledY(endStock)}`;
+
+  const isLow = currentStock <= reorderPoint;
+
+  return (
+    <div className="inline-flex items-center gap-2">
+      <svg width={width} height={height} className="overflow-visible select-none">
+        {/* ROP Line */}
+        <line
+          x1="0"
+          y1={ropY}
+          x2={width}
+          y2={ropY}
+          stroke="var(--border)"
+          strokeDasharray="2,2"
+          strokeWidth="1"
+        />
+        {/* Stock line */}
+        <path
+          d={`M ${p1} L ${p2} L ${p3}`}
+          fill="none"
+          stroke={isLow ? '#EF4444' : '#10B981'}
+          strokeWidth="2"
+          strokeLinecap="round"
+          className="transition-all duration-300"
+        />
+        {/* Current position dot */}
+        <circle
+          cx={width * 0.4}
+          cy={stockY}
+          r="3"
+          fill={isLow ? '#EF4444' : '#10B981'}
+          className="transition-all duration-300 animate-pulse"
+        />
+      </svg>
+    </div>
+  );
+};
+
