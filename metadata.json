@@ -1,0 +1,6 @@
+{
+  "name": "StockSense",
+  "description": "Small-Retail Demand Forecasting and Shelf-Life Aware Replenishment Planner",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
